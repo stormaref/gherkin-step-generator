@@ -109,6 +109,15 @@ func ${testFunc}(t *testing.T) {
 	}
 }
 
+type TestContext struct {
+	// Add any necessary fields here
+}
+
+func InitializeVariables() *TestContext {
+	return &TestContext{
+		// Initialize any necessary fields here
+	}
+}
 `;
 }
 
