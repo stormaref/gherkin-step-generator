@@ -141,15 +141,4 @@ Monitor the extension's activity in the **"Gherkin Step Generator"** output chan
 
 Found a bug or have a feature request? Please open an issue on [GitHub](https://github.com/stormaref/gherkin-step-generator).
 
-## Release Notes
-
-### 0.0.1 (Initial Release)
-
-- Automatic Go test file generation from `.feature` files
-- Smart step pattern conversion with parameter capture
-- Handler function name generation
-- Live file updates on save
-
----
-
 **Enjoy streamlined BDD development with Go and godog!** 🥒
