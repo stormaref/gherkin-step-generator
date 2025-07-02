@@ -19,7 +19,7 @@
     "cucumber",
     "godog",
     "feature",
-    "generator",
+    "generator"
   ],
   "activationEvents": [
     "onStartupFinished",
