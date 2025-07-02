@@ -1,71 +1,155 @@
-# gherkin-step-generator README
+# Gherkin Step Generator
 
-This is the README for your extension "gherkin-step-generator". After writing up a brief description, we recommend including the following sections.
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/ArefAzizian.gherkin-step-generator.svg)](https://marketplace.visualstudio.com/items?itemName=ArefAzizian.gherkin-step-generator)
+
+Generate Go [godog](https://github.com/cucumber/godog) step bindings automatically from Gherkin `.feature` files. This extension streamlines the process of creating Go test files with step definitions from your Cucumber/Gherkin feature files.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- **Automatic Test File Generation**: Automatically generates Go test files with godog step bindings when you save `.feature` files
+- **Smart Step Pattern Matching**: Converts Gherkin steps into Go regex patterns with parameter placeholders
+- **Handler Function Naming**: Automatically converts step descriptions into camelCase handler function names
+- **Live Updates**: Updates existing test files when feature files change, preserving your custom code
+- **File Organization**: Creates test files following Go naming conventions (`*_feature_test.go`)
 
-For example if there is an image subfolder under your extension project workspace:
+### What it does:
 
-\!\[feature X\]\(images/feature-x.png\)
+1. **Watches for `.feature` file saves** and automatically processes them
+2. **Extracts scenarios and steps** from your Gherkin feature files
+3. **Generates Go test files** with:
+   - Proper package structure
+   - godog test suite setup
+   - Step binding patterns with parameter capture groups
+   - Handler function placeholders
+4. **Updates existing files** by regenerating the `InitializeScenario` function while preserving your implementation code
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+### Example
+
+Given a feature file `features/login.feature`:
+
+```gherkin
+Feature: User Login
+  Scenario: Successful login
+    Given I am on the login page
+    When I enter username "$username" and password "$password"
+    Then I should see the dashboard
+```
+
+The extension generates `login_feature_test.go`:
+
+```go
+package login_feature_test
+
+import (
+	"testing"
+	"github.com/cucumber/godog"
+)
+
+func TestLoginFeature(t *testing.T) {
+	suite := godog.TestSuite{
+		ScenarioInitializer: InitializeScenario,
+		Options: &godog.Options{
+			TestingT: t,
+			Paths:    []string{"features/login.feature"},
+			Format:   "pretty",
+			Strict:   true,
+		},
+	}
+
+	if suite.Run() != 0 {
+		t.Fatal("non-zero status returned, failed to run feature tests")
+	}
+}
+
+func InitializeScenario(ctx *godog.ScenarioContext) {
+	tctx := InitializeVariables()
+	// Scenario: Successful login
+	ctx.Step(`^I am on the login page$`, tctx.IAmOnTheLoginPage)
+	ctx.Step(`^I enter username "([^"]+)" and password "([^"]+)"$`, tctx.IEnterUsernameAndPassword)
+	ctx.Step(`^I should see the dashboard$`, tctx.IShouldSeeTheDashboard)
+}
+```
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- **VS Code**: Version 1.101.0 or higher
+- **Go**: For running the generated test files
+- **godog**: The Go BDD framework
+  ```bash
+  go get github.com/cucumber/godog/cmd/godog
+  ```
+
+## Usage
+
+1. **Create or open** a `.feature` file in your workspace
+2. **Write your Gherkin scenarios** using standard Given/When/Then syntax
+3. **Save the file** (Ctrl+S / Cmd+S)
+4. The extension will automatically:
+   - Create a corresponding `*_feature_test.go` file in the parent directory
+   - Generate step bindings for all scenarios
+   - Show progress in the "Gherkin Step Generator" output channel
+
+### File Structure
+
+The extension expects and creates the following structure:
+
+```
+your-project/
+├── features/
+│   └── login.feature
+├── login_feature_test.go  # Generated automatically
+└── other-files...
+```
+
+### Parameter Placeholders
+
+Use `$variableName` in your steps for parameters:
+
+```gherkin
+When I enter "$username" and "$password"
+```
+
+This generates:
+```go
+ctx.Step(`^I enter "([^"]+)" and "([^"]+)"$`, tctx.IEnterAndPassword)
+```
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+This extension doesn't contribute any VS Code settings at this time. It works automatically when you save `.feature` files.
 
-For example:
+## Output Channel
 
-This extension contributes the following settings:
+Monitor the extension's activity in the **"Gherkin Step Generator"** output channel:
+- File creation confirmations
+- Update notifications
+- Error messages and warnings
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+## Tips
+
+- **Implement the handler functions**: After generation, implement the `tctx.*` handler functions in your test context
+- **Preserve custom code**: The extension only updates the `InitializeScenario` function, leaving your implementations intact
+- **Use descriptive step names**: Clear step descriptions result in better handler function names
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- The extension assumes a specific project structure (features in subdirectory)
+- Parameter placeholders must use the `$variableName` format
+- Complex Gherkin features with tables or doc strings require manual step pattern adjustments
+
+## Contributing
+
+Found a bug or have a feature request? Please open an issue on [GitHub](https://github.com/stormaref/gherkin-step-generator).
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.0.1 (Initial Release)
 
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+- Automatic Go test file generation from `.feature` files
+- Smart step pattern conversion with parameter capture
+- Handler function name generation
+- Live file updates on save
 
 ---
 
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+**Enjoy streamlined BDD development with Go and godog!** 🥒
