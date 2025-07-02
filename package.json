@@ -2,7 +2,7 @@
   "name": "gherkin-step-generator",
   "displayName": "Go Gherkin Step Generator",
   "description": "Generate Go godog step bindings from .feature files",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "ArefAzizian",
   "engines": {
     "vscode": "^1.50.0"

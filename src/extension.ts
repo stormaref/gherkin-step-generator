@@ -143,23 +143,50 @@ function extractScenarios(text: string): Scenario[] {
   return scenarios;
 }
 
+// function buildScenarioFunc(initFunc: string, scenarios: Scenario[]): string {
+//   const lines: string[] = [];
+//   scenarios.forEach(({ name, steps }) => {
+//     lines.push(`// Scenario: ${name}`);
+//     steps.forEach(step => {
+//       const pattern = buildStepPattern(step);
+//       const handler = toHandlerName(step);
+//       lines.push(`	ctx.Step(\`${pattern}\`, tctx.${handler})`);
+//     });
+//   });
+//   return `
+// func ${initFunc}(ctx *godog.ScenarioContext) {
+// 	tctx := InitializeVariables()
+// ${lines.join('\n')}
+// }
+// `;
+// }
+
 function buildScenarioFunc(initFunc: string, scenarios: Scenario[]): string {
   const lines: string[] = [];
-  scenarios.forEach(({ name, steps }) => {
-    lines.push(`// Scenario: ${name}`);
-    steps.forEach(step => {
+  const registeredSteps = new Set<string>();
+
+  lines.push(`// Registered steps from all scenarios:`);
+
+  for (const { name, steps } of scenarios) {
+    for (const step of steps) {
+      if (registeredSteps.has(step)) continue;
+
+      registeredSteps.add(step);
       const pattern = buildStepPattern(step);
       const handler = toHandlerName(step);
-      lines.push(`	ctx.Step(\`${pattern}\`, tctx.${handler})`);
-    });
-  });
+      lines.push(`// From: ${name}`);
+      lines.push(`ctx.Step(\`${pattern}\`, tctx.${handler})`);
+    }
+  }
+
   return `
 func ${initFunc}(ctx *godog.ScenarioContext) {
 	tctx := InitializeVariables()
-${lines.join('\n')}
+${lines.map(line => '\t' + line).join('\n')}
 }
 `;
 }
+
 
 function buildStepPattern(step: string): string {
   // 1. Escape all regex meta‑characters
