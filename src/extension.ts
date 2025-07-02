@@ -144,62 +144,54 @@ func InitializeVariables() *TestContext {
 }
 
 interface Scenario {
-  name: string;
+  name: string;            // "Background" or scenario name
   steps: string[];
+  isBackground?: boolean;  // true if it's background
 }
 
 function extractScenarios(text: string): Scenario[] {
   const lines = text.split(/\r?\n/);
   const scenarios: Scenario[] = [];
   let current: Scenario | null = null;
+  let background: Scenario | null = null;
+
   const stepRegex = /^\s*(Given|When|Then|And|But)\s+(.+?)\s*$/i;
   const scenarioRegex = /^\s*Scenario:\s*(.+)$/i;
+  const backgroundRegex = /^\s*Background:\s*$/i;
+
   for (const line of lines) {
-    const sm = line.match(scenarioRegex);
-    if (sm) {
+    if (backgroundRegex.test(line)) {
       if (current) scenarios.push(current);
-      current = { name: sm[1].trim(), steps: [] };
-    } else if (current) {
-      const m = line.match(stepRegex);
-      if (m) current.steps.push(m[2].trim());
+      background = { name: 'Background', steps: [], isBackground: true };
+      current = background;
+    } else {
+      const sm = line.match(scenarioRegex);
+      if (sm) {
+        if (current) scenarios.push(current);
+        current = { name: sm[1].trim(), steps: [] };
+      } else if (current) {
+        const m = line.match(stepRegex);
+        if (m) current.steps.push(m[2].trim());
+      }
     }
   }
   if (current) scenarios.push(current);
   return scenarios;
 }
-
-// function buildScenarioFunc(initFunc: string, scenarios: Scenario[]): string {
-//   const lines: string[] = [];
-//   scenarios.forEach(({ name, steps }) => {
-//     lines.push(`// Scenario: ${name}`);
-//     steps.forEach(step => {
-//       const pattern = buildStepPattern(step);
-//       const handler = toHandlerName(step);
-//       lines.push(`	ctx.Step(\`${pattern}\`, tctx.${handler})`);
-//     });
-//   });
-//   return `
-// func ${initFunc}(ctx *godog.ScenarioContext) {
-// 	tctx := InitializeVariables()
-// ${lines.join('\n')}
-// }
-// `;
-// }
-
 function buildScenarioFunc(initFunc: string, scenarios: Scenario[]): string {
   const lines: string[] = [];
   const registeredSteps = new Set<string>();
 
-  lines.push(`// Registered steps from all scenarios:`);
+  lines.push(`// Registered steps from all scenarios and background:`);
 
-  for (const { name, steps } of scenarios) {
+  for (const { name, steps, isBackground } of scenarios) {
     for (const step of steps) {
       if (registeredSteps.has(step)) continue;
-
       registeredSteps.add(step);
+
       const pattern = buildStepPattern(step);
       const handler = toHandlerName(step);
-      lines.push(`// From: ${name}`);
+      lines.push(`// From: ${isBackground ? "Background" : name}`);
       lines.push(`ctx.Step(\`${pattern}\`, tctx.${handler})`);
     }
   }
@@ -212,11 +204,17 @@ ${lines.map((line) => "\t" + line).join("\n")}
 `;
 }
 
+
 function buildStepPattern(step: string): string {
-  // 1. Escape all regex meta‑characters
+  // Escape all regex meta-characters
   let escaped = step.replace(/([.*+?^${}()|\[\]\\])/g, "\\$1");
-  // 2. Replace each $placeholder with an unquoted capture group: ([^"]+)
-  escaped = escaped.replace(/\$(\w+)/g, '([^"]+)');
+
+  // Replace $placeholders (e.g. $username) with capture groups
+  escaped = escaped.replace(/\$\w+/g, '"([^"]+)"');
+
+  // Replace quoted strings with capture groups
+  escaped = escaped.replace(/"[^"]*"/g, '"([^"]+)"');
+
   return `^${escaped}$`;
 }
 
