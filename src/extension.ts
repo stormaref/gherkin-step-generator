@@ -7,7 +7,9 @@ const outputChannel = vscode.window.createOutputChannel(
 
 export function activate(context: vscode.ExtensionContext) {
   vscode.workspace.onDidSaveTextDocument(async (document) => {
-    if (!document.fileName.endsWith(".feature")) return;
+    if (!document.fileName.endsWith(".feature")) {
+      return;
+    }
 
     const featurePath = document.uri.fsPath;
     const featureName = path.basename(featurePath, ".feature");
@@ -85,8 +87,11 @@ async function rewriteInitializeScenario(
     let i = full.indexOf("{", startIdx) + 1;
     brace = 1;
     while (i < full.length && brace > 0) {
-      if (full[i] === "{") brace++;
-      else if (full[i] === "}") brace--;
+      if (full[i] === "{") {
+        brace++;
+      } else if (full[i] === "}") {
+        brace--;
+      }
       i++;
     }
     const endIdx = i;
@@ -144,9 +149,9 @@ func InitializeVariables() *TestContext {
 }
 
 interface Scenario {
-  name: string;            // "Background" or scenario name
+  name: string; // "Background" or scenario name
   steps: string[];
-  isBackground?: boolean;  // true if it's background
+  isBackground?: boolean; // true if it's background
 }
 
 function extractScenarios(text: string): Scenario[] {
@@ -161,21 +166,29 @@ function extractScenarios(text: string): Scenario[] {
 
   for (const line of lines) {
     if (backgroundRegex.test(line)) {
-      if (current) scenarios.push(current);
-      background = { name: 'Background', steps: [], isBackground: true };
+      if (current) {
+        scenarios.push(current);
+      }
+      background = { name: "Background", steps: [], isBackground: true };
       current = background;
     } else {
       const sm = line.match(scenarioRegex);
       if (sm) {
-        if (current) scenarios.push(current);
+        if (current) {
+          scenarios.push(current);
+        }
         current = { name: sm[1].trim(), steps: [] };
       } else if (current) {
         const m = line.match(stepRegex);
-        if (m) current.steps.push(m[2].trim());
+        if (m) {
+          current.steps.push(m[2].trim());
+        }
       }
     }
   }
-  if (current) scenarios.push(current);
+  if (current) {
+    scenarios.push(current);
+  }
   return scenarios;
 }
 function buildScenarioFunc(initFunc: string, scenarios: Scenario[]): string {
@@ -186,10 +199,12 @@ function buildScenarioFunc(initFunc: string, scenarios: Scenario[]): string {
 
   for (const { name, steps, isBackground } of scenarios) {
     for (const step of steps) {
-      if (registeredSteps.has(step)) continue;
-      registeredSteps.add(step);
-
       const pattern = buildStepPattern(step);
+      if (registeredSteps.has(pattern)) {
+        continue;
+      }
+      registeredSteps.add(pattern);
+
       const handler = toHandlerName(step);
       lines.push(`// From: ${isBackground ? "Background" : name}`);
       lines.push(`ctx.Step(\`${pattern}\`, tctx.${handler})`);
@@ -204,13 +219,12 @@ ${lines.map((line) => "\t" + line).join("\n")}
 `;
 }
 
-
 function buildStepPattern(step: string): string {
   // Escape all regex meta-characters
   let escaped = step.replace(/([.*+?^${}()|\[\]\\])/g, "\\$1");
 
   // Replace $placeholders (e.g. $username) with capture groups
-  escaped = escaped.replace(/\$\w+/g, '"([^"]+)"');
+  // escaped = escaped.replace(/\$\w+/g, '"([^"]+)"');
 
   // Replace quoted strings with capture groups
   escaped = escaped.replace(/"[^"]*"/g, '"([^"]+)"');
@@ -221,7 +235,8 @@ function buildStepPattern(step: string): string {
 function toHandlerName(step: string): string {
   // Strip out $placeholders and punctuation, then split into words
   const words = step
-    .replace(/\$\w+/g, "")
+    .replace(/"[^"]*"/g, "")
+    // .replace(/\$\w+/g, "")
     .replace(/[^\w\s]/g, "")
     .split(/\s+/)
     .filter((w) => w.length);
