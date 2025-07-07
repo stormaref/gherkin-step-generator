@@ -241,9 +241,10 @@ function toHandlerName(step: string): string {
     .split(/\s+/)
     .filter((w) => w.length);
   // Convert to PascalCase (first letter uppercase)
-  return words
+  var built = words
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join("");
+  return built.replaceAll("Id", "ID");
 }
 
 function capitalize(s: string): string {
